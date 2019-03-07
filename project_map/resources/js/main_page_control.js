@@ -1,7 +1,7 @@
     var canvas = document.getElementById("mainCanvas");
     var ctx = canvas.getContext("2d");
     var point_radius = 15;
-    var point_array =[];
+    var map_array =[];
     $(document).ready(function () {
         getSavedMaps();
         $('#generate').on('submit', function(e){
@@ -11,14 +11,9 @@
             onSave(e);
         });
         $('#load_map').on('submit', function(e){
-            id = document.getElementById("map_selector").value;
-            document.getElementById("start_point").value = "";
-            document.getElementById("end_point").value = "";
-            onLoad(id,e);
+            onLoad(e);
         });
         $('#calculate_path').on('submit', function(e){
-            id = document.getElementById("map_id").value;
-            onLoad(id,e);
             onCalculate(e);
         });
         $('#mainCanvas').on('click', function(e){
@@ -41,8 +36,8 @@
         radius = 15;
         mouseX = parseInt(e.clientX - offsetX);
         mouseY = parseInt(e.clientY - offsetY);
-        for (data_val in point_array){
-             if (Math.abs(mouseX-point_array[data_val].x) < radius && Math.abs(mouseY-point_array[data_val].y) < radius  ){
+        for (data_val in map_array.points){
+             if (Math.abs(mouseX-map_array.points[data_val].x) < radius && Math.abs(mouseY-map_array.points[data_val].y) < radius  ){
                 if(document.getElementById("start_point").value == ""){
                     document.getElementById("start_point").value = data_val;
                 } else {
@@ -89,6 +84,7 @@
             data:  "&width=" + width + "&height=" + height,
             dataType:"json",
             success: function (data) {
+                map_array = data;
                 setNewMap(data);
                 document.getElementById("start_point").value = "";
                 document.getElementById("end_point").value = "";
@@ -104,8 +100,7 @@
     function setNewMap(data){
         document.getElementById("map_id").value = data.id;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        point_array = data.points;
-         for (data_val in data.points){
+        for (data_val in data.points){
            drawCircle(data.points[data_val]);
         }
         for (data_val in data.links){ //data.links[data_val]
@@ -175,14 +170,18 @@
     /*
      * gets existing map from db and draw it
      */
-    function onLoad(id,e){
-       e.preventDefault();
-       $.ajax({
+    function onLoad(e){
+        e.preventDefault();
+        id = document.getElementById("map_selector").value;
+        document.getElementById("start_point").value = "";
+        document.getElementById("end_point").value = "";
+        $.ajax({
             url : "server/ex_serv.php?action=get_map",
             type: "GET",
             data:  "&id="+id,
             dataType:"json",
             success: function (data) {
+                map_array = data;
                 setNewMap(data);
             },
             error: function (jXHR, textStatus, errorThrown) {
@@ -206,6 +205,7 @@
                  dataType:"json",
                  success: function (data) {
                     if(data.fastest.length != 0){
+                        setNewMap(map_array);
                         var fast_array = data.fastest.point.split(":");
                         var long_array = data.longest.point.split(":");
                         drawWay(fast_array,"#00FF00",0);
@@ -231,9 +231,9 @@
     function drawWay(path_array,color,offset){
         ctx.beginPath();
         ctx.strokeStyle=color;
-        ctx.moveTo(point_array[start_point].x,point_array[start_point].y);
+        ctx.moveTo(map_array.points[start_point].x,map_array.points[start_point].y);
         for (data_val in path_array){
-            ctx.lineTo(point_array[path_array[data_val]].x - offset,point_array[path_array[data_val]].y - offset);
+            ctx.lineTo(map_array.points[path_array[data_val]].x - offset,map_array.points[path_array[data_val]].y - offset);
 
         }
         ctx.stroke();
